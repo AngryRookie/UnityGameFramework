@@ -5,7 +5,6 @@
 // Feedback: mailto:jiangyin@gameframework.cn
 //------------------------------------------------------------
 
-using GameFramework;
 using GameFramework.UI;
 using UnityEngine;
 
@@ -134,7 +133,7 @@ namespace UnityGameFramework.Runtime
             m_UIFormLogic = GetComponent<UIFormLogic>();
             if (m_UIFormLogic == null)
             {
-                Log.Error("Can not get UI form logic.");
+                Log.Error("UI form '{0}' can not get UI form logic.", uiFormAssetName);
                 return;
             }
 
