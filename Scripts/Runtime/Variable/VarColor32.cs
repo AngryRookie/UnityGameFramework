@@ -11,42 +11,42 @@ using UnityEngine;
 namespace UnityGameFramework.Runtime
 {
     /// <summary>
-    /// UnityEngine.Rect 变量类。
+    /// UnityEngine.Color32 变量类。
     /// </summary>
-    public sealed class VarRect : Variable<Rect>
+    public sealed class VarColor32 : Variable<Color32>
     {
         /// <summary>
-        /// 初始化 UnityEngine.Rect 变量类的新实例。
+        /// 初始化 UnityEngine.Color32 变量类的新实例。
         /// </summary>
-        public VarRect()
+        public VarColor32()
         {
 
         }
 
         /// <summary>
-        /// 初始化 UnityEngine.Rect 变量类的新实例。
+        /// 初始化 UnityEngine.Color32 变量类的新实例。
         /// </summary>
         /// <param name="value">值。</param>
-        public VarRect(Rect value)
+        public VarColor32(Color32 value)
             : base(value)
         {
 
         }
 
         /// <summary>
-        /// 从 UnityEngine.Rect 到 UnityEngine.Rect 变量类的隐式转换。
+        /// 从 UnityEngine.Color32 到 UnityEngine.Color32 变量类的隐式转换。
         /// </summary>
         /// <param name="value">值。</param>
-        public static implicit operator VarRect(Rect value)
+        public static implicit operator VarColor32(Color32 value)
         {
-            return new VarRect(value);
+            return new VarColor32(value);
         }
 
         /// <summary>
-        /// 从 UnityEngine.Rect 变量类到 UnityEngine.Rect 的隐式转换。
+        /// 从 UnityEngine.Color32 变量类到 UnityEngine.Color32 的隐式转换。
         /// </summary>
         /// <param name="value">值。</param>
-        public static implicit operator Rect(VarRect value)
+        public static implicit operator Color32(VarColor32 value)
         {
             return value.Value;
         }

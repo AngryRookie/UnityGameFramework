@@ -1,6 +1,6 @@
 ﻿//------------------------------------------------------------
-// Game Framework v3.x
-// Copyright © 2013-2018 Jiang Yin. All rights reserved.
+// Game Framework
+// Copyright © 2013-2019 Jiang Yin. All rights reserved.
 // Homepage: http://gameframework.cn/
 // Feedback: mailto:jiangyin@gameframework.cn
 //------------------------------------------------------------
@@ -32,7 +32,7 @@ namespace UnityGameFramework.Editor
 
         private FieldInfo m_EditorResourceModeFieldInfo = null;
 
-        private string[] m_ResourceModeNames = new string[] { "Package", "Updatable" };
+        private readonly string[] m_ResourceModeNames = new string[] { "Package", "Updatable" };
         private int m_ResourceModeIndex = 0;
         private HelperInfo<ResourceHelperBase> m_ResourceHelperInfo = new HelperInfo<ResourceHelperBase>("Resource");
         private HelperInfo<LoadResourceAgentHelperBase> m_LoadResourceAgentHelperInfo = new HelperInfo<LoadResourceAgentHelperBase>("LoadResourceAgent");
@@ -54,7 +54,7 @@ namespace UnityGameFramework.Editor
 
             EditorGUI.BeginDisabledGroup(EditorApplication.isPlayingOrWillChangePlaymode);
             {
-                if (EditorApplication.isPlaying && PrefabUtility.GetPrefabType(t.gameObject) != PrefabType.Prefab)
+                if (EditorApplication.isPlaying && IsPrefabInHierarchy(t.gameObject))
                 {
                     EditorGUILayout.EnumPopup("Resource Mode", t.ResourceMode);
                 }
@@ -210,11 +210,11 @@ namespace UnityGameFramework.Editor
                     {
                         if (EditorApplication.isPlaying)
                         {
-                            t.UpdateRetryCount = resourceCapacity;
+                            t.UpdateRetryCount = updateRetryCount;
                         }
                         else
                         {
-                            m_UpdateRetryCount.intValue = resourceCapacity;
+                            m_UpdateRetryCount.intValue = updateRetryCount;
                         }
                     }
                 }
@@ -231,7 +231,7 @@ namespace UnityGameFramework.Editor
             }
             EditorGUI.EndDisabledGroup();
 
-            if (EditorApplication.isPlaying && PrefabUtility.GetPrefabType(t.gameObject) != PrefabType.Prefab)
+            if (EditorApplication.isPlaying && IsPrefabInHierarchy(t.gameObject))
             {
                 EditorGUILayout.LabelField("Read Only Path", t.ReadOnlyPath.ToString());
                 EditorGUILayout.LabelField("Read Write Path", t.ReadWritePath.ToString());

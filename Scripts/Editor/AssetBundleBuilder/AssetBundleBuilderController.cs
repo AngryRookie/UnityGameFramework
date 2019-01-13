@@ -1,6 +1,6 @@
 ﻿//------------------------------------------------------------
-// Game Framework v3.x
-// Copyright © 2013-2018 Jiang Yin. All rights reserved.
+// Game Framework
+// Copyright © 2013-2019 Jiang Yin. All rights reserved.
 // Homepage: http://gameframework.cn/
 // Feedback: mailto:jiangyin@gameframework.cn
 //------------------------------------------------------------
@@ -25,7 +25,7 @@ namespace UnityGameFramework.Editor.AssetBundleTools
         private static readonly char[] PackageListHeader = new char[] { 'E', 'L', 'P' };
         private static readonly char[] VersionListHeader = new char[] { 'E', 'L', 'V' };
         private static readonly char[] ReadOnlyListHeader = new char[] { 'E', 'L', 'R' };
-        private static readonly int AssetsSubstringLength = "Assets/".Length;
+        private static readonly int AssetsStringLength = "Assets".Length;
         private const byte PackageListVersion = 0;
         private const byte VersionListVersion = 0;
         private const byte ReadOnlyListVersion = 0;
@@ -92,8 +92,11 @@ namespace UnityGameFramework.Editor.AssetBundleTools
             m_VersionListDatas = new Dictionary<Platform, VersionListData>();
             m_BuildReport = new BuildReport();
 
-            m_BuildEventHandlerTypeNames = new List<string>();
-            m_BuildEventHandlerTypeNames.Add(NoneOptionName);
+            m_BuildEventHandlerTypeNames = new List<string>
+            {
+                NoneOptionName
+            };
+
             m_BuildEventHandlerTypeNames.AddRange(Type.GetEditorTypeNames(typeof(IBuildEventHandler)));
             m_BuildEventHandler = null;
 
@@ -722,11 +725,12 @@ namespace UnityGameFramework.Editor.AssetBundleTools
             }
             catch (Exception exception)
             {
-                m_BuildReport.LogFatal(Utility.Text.Format("{0}\n{1}", exception.Message, exception.StackTrace));
+                string errorMessage = Utility.Text.Format("{0}\n{1}", exception.Message, exception.StackTrace);
+                m_BuildReport.LogFatal(errorMessage);
                 m_BuildReport.SaveReport();
                 if (BuildAssetBundlesError != null)
                 {
-                    BuildAssetBundlesError(exception.Message);
+                    BuildAssetBundlesError(errorMessage);
                 }
 
                 return false;
@@ -1035,8 +1039,6 @@ namespace UnityGameFramework.Editor.AssetBundleTools
 
                     // TODO: Resource group.
                     binaryWriter.Write(0);
-
-                    binaryWriter.Close();
                 }
             }
 
@@ -1134,8 +1136,6 @@ namespace UnityGameFramework.Editor.AssetBundleTools
 
                     // TODO: Resource group.
                     binaryWriter.Write(0);
-
-                    binaryWriter.Close();
                 }
             }
 
@@ -1212,8 +1212,6 @@ namespace UnityGameFramework.Editor.AssetBundleTools
                         binaryWriter.Write(assetBundleCode.Length);
                         binaryWriter.Write(assetBundleCode.HashCode);
                     }
-
-                    binaryWriter.Close();
                 }
             }
 
@@ -1322,7 +1320,7 @@ namespace UnityGameFramework.Editor.AssetBundleTools
                     return null;
                 }
 
-                string assetFileFullName = Utility.Path.GetCombinePath(Application.dataPath, assetName.Substring(AssetsSubstringLength));
+                string assetFileFullName = Application.dataPath.Substring(0, Application.dataPath.Length - AssetsStringLength) + assetName;
                 if (!File.Exists(assetFileFullName))
                 {
                     m_BuildReport.LogError("Can not find asset '{0}'.", assetFileFullName);
@@ -1417,7 +1415,7 @@ namespace UnityGameFramework.Editor.AssetBundleTools
 
         private byte[] GetXorBytes(byte[] bytes, byte[] code)
         {
-            return GetXorBytes(bytes, code, 0);
+            return GetXorBytes(bytes, code, -1);
         }
 
         private byte[] GetXorBytes(byte[] bytes, byte[] code, int length)
@@ -1435,13 +1433,13 @@ namespace UnityGameFramework.Editor.AssetBundleTools
 
             int codeIndex = 0;
             int bytesLength = bytes.Length;
-            if (length <= 0 || length > bytesLength)
+            if (length < 0 || length > bytesLength)
             {
                 length = bytesLength;
             }
 
             byte[] result = new byte[bytesLength];
-            System.Buffer.BlockCopy(bytes, 0, result, 0, bytesLength);
+            Buffer.BlockCopy(bytes, 0, result, 0, bytesLength);
 
             for (int i = 0; i < length; i++)
             {
