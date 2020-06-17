@@ -1,8 +1,8 @@
 ﻿//------------------------------------------------------------
 // Game Framework
-// Copyright © 2013-2019 Jiang Yin. All rights reserved.
-// Homepage: http://gameframework.cn/
-// Feedback: mailto:jiangyin@gameframework.cn
+// Copyright © 2013-2020 Jiang Yin. All rights reserved.
+// Homepage: https://gameframework.cn/
+// Feedback: mailto:ellan@gameframework.cn
 //------------------------------------------------------------
 
 using GameFramework;
@@ -13,13 +13,15 @@ using UnityEngine;
 
 namespace UnityGameFramework.Runtime
 {
-    public partial class DebuggerComponent
+    public sealed partial class DebuggerComponent : GameFrameworkComponent
     {
         [Serializable]
-        private partial class ConsoleWindow : IDebuggerWindow
+        private sealed class ConsoleWindow : IDebuggerWindow
         {
+            private readonly Queue<LogNode> m_LogNodes = new Queue<LogNode>();
+            private readonly TextEditor m_TextEditor = new TextEditor();
+
             private SettingComponent m_SettingComponent = null;
-            private Queue<LogNode> m_LogNodes = new Queue<LogNode>();
             private Vector2 m_LogScrollPosition = Vector2.zero;
             private Vector2 m_StackScrollPosition = Vector2.zero;
             private int m_InfoCount = 0;
@@ -37,10 +39,7 @@ namespace UnityGameFramework.Runtime
             private bool m_LockScroll = true;
 
             [SerializeField]
-            private int m_MaxLine = 300;
-
-            [SerializeField]
-            private string m_DateTimeFormat = "[HH:mm:ss.fff] ";
+            private int m_MaxLine = 100;
 
             [SerializeField]
             private bool m_InfoFilter = true;
@@ -87,18 +86,6 @@ namespace UnityGameFramework.Runtime
                 set
                 {
                     m_MaxLine = value;
-                }
-            }
-
-            public string DateTimeFormat
-            {
-                get
-                {
-                    return m_DateTimeFormat;
-                }
-                set
-                {
-                    m_DateTimeFormat = value ?? string.Empty;
                 }
             }
 
@@ -255,12 +242,10 @@ namespace UnityGameFramework.Runtime
 
             public void OnEnter()
             {
-
             }
 
             public void OnLeave()
             {
-
             }
 
             public void OnUpdate(float elapseSeconds, float realElapseSeconds)
@@ -335,18 +320,21 @@ namespace UnityGameFramework.Runtime
                                         continue;
                                     }
                                     break;
+
                                 case LogType.Warning:
                                     if (!m_WarningFilter)
                                     {
                                         continue;
                                     }
                                     break;
+
                                 case LogType.Error:
                                     if (!m_ErrorFilter)
                                     {
                                         continue;
                                     }
                                     break;
+
                                 case LogType.Exception:
                                     if (!m_FatalFilter)
                                     {
@@ -384,13 +372,10 @@ namespace UnityGameFramework.Runtime
                             GUILayout.Label(Utility.Text.Format("<color=#{0}{1}{2}{3}><b>{4}</b></color>", color.r.ToString("x2"), color.g.ToString("x2"), color.b.ToString("x2"), color.a.ToString("x2"), m_SelectedNode.LogMessage));
                             if (GUILayout.Button("COPY", GUILayout.Width(60f), GUILayout.Height(30f)))
                             {
-                                TextEditor textEditor = new TextEditor
-                                {
-                                    text = Utility.Text.Format("{0}\n\n{1}", m_SelectedNode.LogMessage, m_SelectedNode.StackTrack)
-                                };
-
-                                textEditor.OnFocus();
-                                textEditor.Copy();
+                                m_TextEditor.text = Utility.Text.Format("{0}{2}{2}{1}", m_SelectedNode.LogMessage, m_SelectedNode.StackTrack, Environment.NewLine);
+                                m_TextEditor.OnFocus();
+                                m_TextEditor.Copy();
+                                m_TextEditor.text = null;
                             }
                             GUILayout.EndHorizontal();
                             GUILayout.Label(m_SelectedNode.StackTrack);
@@ -419,12 +404,15 @@ namespace UnityGameFramework.Runtime
                         case LogType.Log:
                             m_InfoCount++;
                             break;
+
                         case LogType.Warning:
                             m_WarningCount++;
                             break;
+
                         case LogType.Error:
                             m_ErrorCount++;
                             break;
+
                         case LogType.Exception:
                             m_FatalCount++;
                             break;
@@ -487,7 +475,7 @@ namespace UnityGameFramework.Runtime
                     logType = LogType.Error;
                 }
 
-                m_LogNodes.Enqueue(ReferencePool.Acquire<LogNode>().Fill(logType, logMessage, stackTrace));
+                m_LogNodes.Enqueue(LogNode.Create(logType, logMessage, stackTrace));
                 while (m_LogNodes.Count > m_MaxLine)
                 {
                     ReferencePool.Release(m_LogNodes.Dequeue());
@@ -497,9 +485,9 @@ namespace UnityGameFramework.Runtime
             private string GetLogString(LogNode logNode)
             {
                 Color32 color = GetLogStringColor(logNode.LogType);
-                return Utility.Text.Format("<color=#{0}{1}{2}{3}>{4}{5}</color>",
+                return Utility.Text.Format("<color=#{0}{1}{2}{3}>[{4}][{5}] {6}</color>",
                     color.r.ToString("x2"), color.g.ToString("x2"), color.b.ToString("x2"), color.a.ToString("x2"),
-                    logNode.LogTime.ToString(m_DateTimeFormat), logNode.LogMessage);
+                    logNode.LogTime.ToString("HH:mm:ss.fff"), logNode.LogFrameCount.ToString(), logNode.LogMessage);
             }
 
             internal Color32 GetLogStringColor(LogType logType)
@@ -510,12 +498,15 @@ namespace UnityGameFramework.Runtime
                     case LogType.Log:
                         color = m_InfoColor;
                         break;
+
                     case LogType.Warning:
                         color = m_WarningColor;
                         break;
+
                     case LogType.Error:
                         color = m_ErrorColor;
                         break;
+
                     case LogType.Exception:
                         color = m_FatalColor;
                         break;

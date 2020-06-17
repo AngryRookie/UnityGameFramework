@@ -1,10 +1,11 @@
 ﻿//------------------------------------------------------------
 // Game Framework
-// Copyright © 2013-2019 Jiang Yin. All rights reserved.
-// Homepage: http://gameframework.cn/
-// Feedback: mailto:jiangyin@gameframework.cn
+// Copyright © 2013-2020 Jiang Yin. All rights reserved.
+// Homepage: https://gameframework.cn/
+// Feedback: mailto:ellan@gameframework.cn
 //------------------------------------------------------------
 
+using GameFramework;
 using GameFramework.Event;
 
 namespace UnityGameFramework.Runtime
@@ -18,6 +19,17 @@ namespace UnityGameFramework.Runtime
         /// 加载字典失败事件编号。
         /// </summary>
         public static readonly int EventId = typeof(LoadDictionaryFailureEventArgs).GetHashCode();
+
+        /// <summary>
+        /// 初始化加载字典失败事件的新实例。
+        /// </summary>
+        public LoadDictionaryFailureEventArgs()
+        {
+            DictionaryName = null;
+            DictionaryAssetName = null;
+            ErrorMessage = null;
+            UserData = null;
+        }
 
         /// <summary>
         /// 获取加载字典失败事件编号。
@@ -67,30 +79,31 @@ namespace UnityGameFramework.Runtime
         }
 
         /// <summary>
+        /// 创建加载字典失败事件。
+        /// </summary>
+        /// <param name="e">内部事件。</param>
+        /// <returns>创建的加载字典失败事件。</returns>
+        public static LoadDictionaryFailureEventArgs Create(GameFramework.Localization.LoadDictionaryFailureEventArgs e)
+        {
+            LoadDictionaryInfo loadDictionaryInfo = (LoadDictionaryInfo)e.UserData;
+            LoadDictionaryFailureEventArgs loadDictionaryFailureEventArgs = ReferencePool.Acquire<LoadDictionaryFailureEventArgs>();
+            loadDictionaryFailureEventArgs.DictionaryName = loadDictionaryInfo.DictionaryName;
+            loadDictionaryFailureEventArgs.DictionaryAssetName = e.DictionaryAssetName;
+            loadDictionaryFailureEventArgs.ErrorMessage = e.ErrorMessage;
+            loadDictionaryFailureEventArgs.UserData = loadDictionaryInfo.UserData;
+            ReferencePool.Release(loadDictionaryInfo);
+            return loadDictionaryFailureEventArgs;
+        }
+
+        /// <summary>
         /// 清理加载字典失败事件。
         /// </summary>
         public override void Clear()
         {
-            DictionaryName = default(string);
-            DictionaryAssetName = default(string);
-            ErrorMessage = default(string);
-            UserData = default(object);
-        }
-
-        /// <summary>
-        /// 填充加载字典失败事件。
-        /// </summary>
-        /// <param name="e">内部事件。</param>
-        /// <returns>加载字典失败事件。</returns>
-        public LoadDictionaryFailureEventArgs Fill(GameFramework.Localization.LoadDictionaryFailureEventArgs e)
-        {
-            LoadDictionaryInfo loadDictionaryInfo = (LoadDictionaryInfo)e.UserData;
-            DictionaryName = loadDictionaryInfo.DictionaryName;
-            DictionaryAssetName = e.DictionaryAssetName;
-            ErrorMessage = e.ErrorMessage;
-            UserData = loadDictionaryInfo.UserData;
-
-            return this;
+            DictionaryName = null;
+            DictionaryAssetName = null;
+            ErrorMessage = null;
+            UserData = null;
         }
     }
 }

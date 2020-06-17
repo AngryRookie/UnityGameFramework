@@ -1,8 +1,8 @@
 ﻿//------------------------------------------------------------
 // Game Framework
-// Copyright © 2013-2019 Jiang Yin. All rights reserved.
-// Homepage: http://gameframework.cn/
-// Feedback: mailto:jiangyin@gameframework.cn
+// Copyright © 2013-2020 Jiang Yin. All rights reserved.
+// Homepage: https://gameframework.cn/
+// Feedback: mailto:ellan@gameframework.cn
 //------------------------------------------------------------
 
 using GameFramework;
@@ -10,7 +10,7 @@ using UnityEngine;
 
 namespace UnityGameFramework.Runtime
 {
-    public partial class DebuggerComponent
+    public sealed partial class DebuggerComponent : GameFrameworkComponent
     {
         private sealed class TimeInformationWindow : ScrollableDebuggerWindowBase
         {
@@ -42,6 +42,9 @@ namespace UnityGameFramework.Runtime
                     DrawItem("Frame Count", Time.frameCount.ToString());
                     DrawItem("Rendered Frame Count", Time.renderedFrameCount.ToString());
                     DrawItem("Capture Framerate", Time.captureFramerate.ToString());
+#if UNITY_2019_2_OR_NEWER
+                    DrawItem("Capture Delta Time", Time.captureDeltaTime.ToString());
+#endif
 #if UNITY_5_6_OR_NEWER
                     DrawItem("In Fixed Time Step", Time.inFixedTimeStep.ToString());
 #endif

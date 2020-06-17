@@ -1,11 +1,12 @@
 ﻿//------------------------------------------------------------
 // Game Framework
-// Copyright © 2013-2019 Jiang Yin. All rights reserved.
-// Homepage: http://gameframework.cn/
-// Feedback: mailto:jiangyin@gameframework.cn
+// Copyright © 2013-2020 Jiang Yin. All rights reserved.
+// Homepage: https://gameframework.cn/
+// Feedback: mailto:ellan@gameframework.cn
 //------------------------------------------------------------
 
 using UnityEditor;
+using UnityEngine;
 using UnityGameFramework.Runtime;
 
 namespace UnityGameFramework.Editor
@@ -42,6 +43,15 @@ namespace UnityGameFramework.Editor
             }
 
             EditorGUILayout.PropertyField(m_ShowFullWindow);
+
+            if (EditorApplication.isPlaying)
+            {
+                if (GUILayout.Button("Reset Layout"))
+                {
+                    t.ResetLayout();
+                }
+            }
+
             EditorGUILayout.PropertyField(m_ConsoleWindow, true);
 
             serializedObject.ApplyModifiedProperties();

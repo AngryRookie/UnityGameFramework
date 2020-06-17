@@ -1,11 +1,10 @@
 ﻿//------------------------------------------------------------
 // Game Framework
-// Copyright © 2013-2019 Jiang Yin. All rights reserved.
-// Homepage: http://gameframework.cn/
-// Feedback: mailto:jiangyin@gameframework.cn
+// Copyright © 2013-2020 Jiang Yin. All rights reserved.
+// Homepage: https://gameframework.cn/
+// Feedback: mailto:ellan@gameframework.cn
 //------------------------------------------------------------
 
-using GameFramework;
 using UnityEngine;
 
 namespace UnityGameFramework.Runtime
@@ -17,6 +16,8 @@ namespace UnityGameFramework.Runtime
     {
         private bool m_Available = false;
         private bool m_Visible = false;
+        private UIForm m_UIForm = null;
+        private Transform m_CachedTransform = null;
         private int m_OriginalLayer = 0;
 
         /// <summary>
@@ -26,7 +27,7 @@ namespace UnityGameFramework.Runtime
         {
             get
             {
-                return GetComponent<UIForm>();
+                return m_UIForm;
             }
         }
 
@@ -88,8 +89,10 @@ namespace UnityGameFramework.Runtime
         /// </summary>
         public Transform CachedTransform
         {
-            get;
-            private set;
+            get
+            {
+                return m_CachedTransform;
+            }
         }
 
         /// <summary>
@@ -98,12 +101,20 @@ namespace UnityGameFramework.Runtime
         /// <param name="userData">用户自定义数据。</param>
         protected internal virtual void OnInit(object userData)
         {
-            if (CachedTransform == null)
+            if (m_CachedTransform == null)
             {
-                CachedTransform = transform;
+                m_CachedTransform = transform;
             }
 
+            m_UIForm = GetComponent<UIForm>();
             m_OriginalLayer = gameObject.layer;
+        }
+
+        /// <summary>
+        /// 界面回收。
+        /// </summary>
+        protected internal virtual void OnRecycle()
+        {
         }
 
         /// <summary>
@@ -119,8 +130,9 @@ namespace UnityGameFramework.Runtime
         /// <summary>
         /// 界面关闭。
         /// </summary>
+        /// <param name="isShutdown">是否是关闭界面管理器时触发。</param>
         /// <param name="userData">用户自定义数据。</param>
-        protected internal virtual void OnClose(object userData)
+        protected internal virtual void OnClose(bool isShutdown, object userData)
         {
             gameObject.SetLayerRecursively(m_OriginalLayer);
             Visible = false;
@@ -148,7 +160,6 @@ namespace UnityGameFramework.Runtime
         /// </summary>
         protected internal virtual void OnCover()
         {
-
         }
 
         /// <summary>
@@ -156,7 +167,6 @@ namespace UnityGameFramework.Runtime
         /// </summary>
         protected internal virtual void OnReveal()
         {
-
         }
 
         /// <summary>
@@ -165,7 +175,6 @@ namespace UnityGameFramework.Runtime
         /// <param name="userData">用户自定义数据。</param>
         protected internal virtual void OnRefocus(object userData)
         {
-
         }
 
         /// <summary>
@@ -175,7 +184,6 @@ namespace UnityGameFramework.Runtime
         /// <param name="realElapseSeconds">真实流逝时间，以秒为单位。</param>
         protected internal virtual void OnUpdate(float elapseSeconds, float realElapseSeconds)
         {
-
         }
 
         /// <summary>
@@ -185,7 +193,6 @@ namespace UnityGameFramework.Runtime
         /// <param name="depthInUIGroup">界面在界面组中的深度。</param>
         protected internal virtual void OnDepthChanged(int uiGroupDepth, int depthInUIGroup)
         {
-
         }
 
         /// <summary>

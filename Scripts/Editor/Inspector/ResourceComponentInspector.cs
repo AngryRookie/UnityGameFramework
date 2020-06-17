@@ -1,12 +1,17 @@
 ﻿//------------------------------------------------------------
 // Game Framework
-// Copyright © 2013-2019 Jiang Yin. All rights reserved.
-// Homepage: http://gameframework.cn/
-// Feedback: mailto:jiangyin@gameframework.cn
+// Copyright © 2013-2020 Jiang Yin. All rights reserved.
+// Homepage: https://gameframework.cn/
+// Feedback: mailto:ellan@gameframework.cn
 //------------------------------------------------------------
 
+using GameFramework;
+using System;
+using System.IO;
 using System.Reflection;
+using System.Text;
 using UnityEditor;
+using UnityEngine;
 using UnityGameFramework.Runtime;
 
 namespace UnityGameFramework.Editor
@@ -14,6 +19,8 @@ namespace UnityGameFramework.Editor
     [CustomEditor(typeof(ResourceComponent))]
     internal sealed class ResourceComponentInspector : GameFrameworkInspector
     {
+        private static readonly string[] ResourceModeNames = new string[] { "Package", "Updatable", "Updatable While Playing" };
+
         private SerializedProperty m_ResourceMode = null;
         private SerializedProperty m_ReadWritePathType = null;
         private SerializedProperty m_UnloadUnusedAssetsInterval = null;
@@ -26,13 +33,13 @@ namespace UnityGameFramework.Editor
         private SerializedProperty m_ResourceExpireTime = null;
         private SerializedProperty m_ResourcePriority = null;
         private SerializedProperty m_UpdatePrefixUri = null;
+        private SerializedProperty m_GenerateReadWriteVersionListLength = null;
         private SerializedProperty m_UpdateRetryCount = null;
         private SerializedProperty m_InstanceRoot = null;
         private SerializedProperty m_LoadResourceAgentHelperCount = null;
 
         private FieldInfo m_EditorResourceModeFieldInfo = null;
 
-        private readonly string[] m_ResourceModeNames = new string[] { "Package", "Updatable" };
         private int m_ResourceModeIndex = 0;
         private HelperInfo<ResourceHelperBase> m_ResourceHelperInfo = new HelperInfo<ResourceHelperBase>("Resource");
         private HelperInfo<LoadResourceAgentHelperBase> m_LoadResourceAgentHelperInfo = new HelperInfo<LoadResourceAgentHelperBase>("LoadResourceAgent");
@@ -60,7 +67,7 @@ namespace UnityGameFramework.Editor
                 }
                 else
                 {
-                    int selectedIndex = EditorGUILayout.Popup("Resource Mode", m_ResourceModeIndex, m_ResourceModeNames);
+                    int selectedIndex = EditorGUILayout.Popup("Resource Mode", m_ResourceModeIndex, ResourceModeNames);
                     if (selectedIndex != m_ResourceModeIndex)
                     {
                         m_ResourceModeIndex = selectedIndex;
@@ -190,7 +197,7 @@ namespace UnityGameFramework.Editor
                     }
                 }
 
-                if (m_ResourceModeIndex == 1)
+                if (m_ResourceModeIndex > 0)
                 {
                     string updatePrefixUri = EditorGUILayout.DelayedTextField("Update Prefix Uri", m_UpdatePrefixUri.stringValue);
                     if (updatePrefixUri != m_UpdatePrefixUri.stringValue)
@@ -202,6 +209,19 @@ namespace UnityGameFramework.Editor
                         else
                         {
                             m_UpdatePrefixUri.stringValue = updatePrefixUri;
+                        }
+                    }
+
+                    int generateReadWriteVersionListLength = EditorGUILayout.DelayedIntField("Generate Read Write Version List Length", m_GenerateReadWriteVersionListLength.intValue);
+                    if (generateReadWriteVersionListLength != m_GenerateReadWriteVersionListLength.intValue)
+                    {
+                        if (EditorApplication.isPlaying)
+                        {
+                            t.GenerateReadWriteVersionListLength = generateReadWriteVersionListLength;
+                        }
+                        else
+                        {
+                            m_GenerateReadWriteVersionListLength.intValue = generateReadWriteVersionListLength;
                         }
                     }
 
@@ -227,7 +247,7 @@ namespace UnityGameFramework.Editor
 
                 m_ResourceHelperInfo.Draw();
                 m_LoadResourceAgentHelperInfo.Draw();
-                m_LoadResourceAgentHelperCount.intValue = EditorGUILayout.IntSlider("Load Resource Agent Helper Count", m_LoadResourceAgentHelperCount.intValue, 1, 64);
+                m_LoadResourceAgentHelperCount.intValue = EditorGUILayout.IntSlider("Load Resource Agent Helper Count", m_LoadResourceAgentHelperCount.intValue, 1, 128);
             }
             EditorGUI.EndDisabledGroup();
 
@@ -241,15 +261,63 @@ namespace UnityGameFramework.Editor
                 EditorGUILayout.LabelField("Asset Count", isEditorResourceMode ? "N/A" : t.AssetCount.ToString());
                 EditorGUILayout.LabelField("Resource Count", isEditorResourceMode ? "N/A" : t.ResourceCount.ToString());
                 EditorGUILayout.LabelField("Resource Group Count", isEditorResourceMode ? "N/A" : t.ResourceGroupCount.ToString());
-                if (m_ResourceModeIndex == 1)
+                if (m_ResourceModeIndex > 0)
                 {
+                    EditorGUILayout.LabelField("Applying Resource Pack Path", isEditorResourceMode ? "N/A" : t.ApplyingResourcePackPath ?? "<Unknwon>");
+                    EditorGUILayout.LabelField("Apply Waiting Count", isEditorResourceMode ? "N/A" : t.ApplyWaitingCount.ToString());
+                    EditorGUILayout.LabelField("Updating Resource Group", isEditorResourceMode ? "N/A" : t.UpdatingResourceGroup != null ? t.UpdatingResourceGroup.Name : "<Unknwon>");
                     EditorGUILayout.LabelField("Update Waiting Count", isEditorResourceMode ? "N/A" : t.UpdateWaitingCount.ToString());
+                    EditorGUILayout.LabelField("Update Candidate Count", isEditorResourceMode ? "N/A" : t.UpdateCandidateCount.ToString());
                     EditorGUILayout.LabelField("Updating Count", isEditorResourceMode ? "N/A" : t.UpdatingCount.ToString());
                 }
                 EditorGUILayout.LabelField("Load Total Agent Count", isEditorResourceMode ? "N/A" : t.LoadTotalAgentCount.ToString());
                 EditorGUILayout.LabelField("Load Free Agent Count", isEditorResourceMode ? "N/A" : t.LoadFreeAgentCount.ToString());
                 EditorGUILayout.LabelField("Load Working Agent Count", isEditorResourceMode ? "N/A" : t.LoadWorkingAgentCount.ToString());
                 EditorGUILayout.LabelField("Load Waiting Task Count", isEditorResourceMode ? "N/A" : t.LoadWaitingTaskCount.ToString());
+                if (!isEditorResourceMode)
+                {
+                    EditorGUILayout.BeginVertical("box");
+                    {
+                        TaskInfo[] loadAssetInfos = t.GetAllLoadAssetInfos();
+                        if (loadAssetInfos.Length > 0)
+                        {
+                            foreach (TaskInfo loadAssetInfo in loadAssetInfos)
+                            {
+                                DrawLoadAssetInfo(loadAssetInfo);
+                            }
+
+                            if (GUILayout.Button("Export CSV Data"))
+                            {
+                                string exportFileName = EditorUtility.SaveFilePanel("Export CSV Data", string.Empty, "Load Asset Task Data.csv", string.Empty);
+                                if (!string.IsNullOrEmpty(exportFileName))
+                                {
+                                    try
+                                    {
+                                        int index = 0;
+                                        string[] data = new string[loadAssetInfos.Length + 1];
+                                        data[index++] = "Load Asset Name,Serial Id,Priority,Status";
+                                        foreach (TaskInfo loadAssetInfo in loadAssetInfos)
+                                        {
+                                            data[index++] = Utility.Text.Format("{0},{1},{2},{3}", loadAssetInfo.Description, loadAssetInfo.SerialId.ToString(), loadAssetInfo.Priority.ToString(), loadAssetInfo.Status.ToString());
+                                        }
+
+                                        File.WriteAllLines(exportFileName, data, Encoding.UTF8);
+                                        Debug.Log(Utility.Text.Format("Export load asset task CSV data to '{0}' success.", exportFileName));
+                                    }
+                                    catch (Exception exception)
+                                    {
+                                        Debug.LogError(Utility.Text.Format("Export load asset task CSV data to '{0}' failure, exception is '{1}'.", exportFileName, exception.ToString()));
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            GUILayout.Label("Load Asset Task is Empty ...");
+                        }
+                    }
+                    EditorGUILayout.EndVertical();
+                }
             }
 
             serializedObject.ApplyModifiedProperties();
@@ -278,6 +346,7 @@ namespace UnityGameFramework.Editor
             m_ResourceExpireTime = serializedObject.FindProperty("m_ResourceExpireTime");
             m_ResourcePriority = serializedObject.FindProperty("m_ResourcePriority");
             m_UpdatePrefixUri = serializedObject.FindProperty("m_UpdatePrefixUri");
+            m_GenerateReadWriteVersionListLength = serializedObject.FindProperty("m_GenerateReadWriteVersionListLength");
             m_UpdateRetryCount = serializedObject.FindProperty("m_UpdateRetryCount");
             m_InstanceRoot = serializedObject.FindProperty("m_InstanceRoot");
             m_LoadResourceAgentHelperCount = serializedObject.FindProperty("m_LoadResourceAgentHelperCount");
@@ -291,9 +360,14 @@ namespace UnityGameFramework.Editor
             RefreshTypeNames();
         }
 
+        private void DrawLoadAssetInfo(TaskInfo loadAssetInfo)
+        {
+            EditorGUILayout.LabelField(loadAssetInfo.Description, Utility.Text.Format("[SerialId]{0} [Priority]{1} [Status]{2}", loadAssetInfo.SerialId.ToString(), loadAssetInfo.Priority.ToString(), loadAssetInfo.Status.ToString()));
+        }
+
         private void RefreshModes()
         {
-            m_ResourceModeIndex = (m_ResourceMode.enumValueIndex > 0 ? m_ResourceMode.enumValueIndex - 1 : 0);
+            m_ResourceModeIndex = m_ResourceMode.enumValueIndex > 0 ? m_ResourceMode.enumValueIndex - 1 : 0;
         }
 
         private void RefreshTypeNames()

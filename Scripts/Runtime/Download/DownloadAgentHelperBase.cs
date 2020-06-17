@@ -1,8 +1,8 @@
 ﻿//------------------------------------------------------------
 // Game Framework
-// Copyright © 2013-2019 Jiang Yin. All rights reserved.
-// Homepage: http://gameframework.cn/
-// Feedback: mailto:jiangyin@gameframework.cn
+// Copyright © 2013-2020 Jiang Yin. All rights reserved.
+// Homepage: https://gameframework.cn/
+// Feedback: mailto:ellan@gameframework.cn
 //------------------------------------------------------------
 
 using GameFramework.Download;
@@ -16,10 +16,17 @@ namespace UnityGameFramework.Runtime
     /// </summary>
     public abstract class DownloadAgentHelperBase : MonoBehaviour, IDownloadAgentHelper
     {
+        protected const int RangeNotSatisfiableErrorCode = 416;
+
         /// <summary>
-        /// 下载代理辅助器更新事件。
+        /// 下载代理辅助器更新数据流事件。
         /// </summary>
-        public abstract event EventHandler<DownloadAgentHelperUpdateEventArgs> DownloadAgentHelperUpdate;
+        public abstract event EventHandler<DownloadAgentHelperUpdateBytesEventArgs> DownloadAgentHelperUpdateBytes;
+
+        /// <summary>
+        /// 下载代理辅助器更新数据大小事件。
+        /// </summary>
+        public abstract event EventHandler<DownloadAgentHelperUpdateLengthEventArgs> DownloadAgentHelperUpdateLength;
 
         /// <summary>
         /// 下载代理辅助器完成事件。

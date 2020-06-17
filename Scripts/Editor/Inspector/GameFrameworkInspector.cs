@@ -1,8 +1,8 @@
 ﻿//------------------------------------------------------------
 // Game Framework
-// Copyright © 2013-2019 Jiang Yin. All rights reserved.
-// Homepage: http://gameframework.cn/
-// Feedback: mailto:jiangyin@gameframework.cn
+// Copyright © 2013-2020 Jiang Yin. All rights reserved.
+// Homepage: https://gameframework.cn/
+// Feedback: mailto:ellan@gameframework.cn
 //------------------------------------------------------------
 
 using UnityEditor;
@@ -38,7 +38,6 @@ namespace UnityGameFramework.Editor
         /// </summary>
         protected virtual void OnCompileStart()
         {
-
         }
 
         /// <summary>
@@ -46,7 +45,6 @@ namespace UnityGameFramework.Editor
         /// </summary>
         protected virtual void OnCompileComplete()
         {
-
         }
 
         protected bool IsPrefabInHierarchy(UnityEngine.Object obj)
@@ -57,7 +55,7 @@ namespace UnityGameFramework.Editor
             }
 
 #if UNITY_2018_3_OR_NEWER
-            return true;
+            return PrefabUtility.GetPrefabAssetType(obj) != PrefabAssetType.Regular;
 #else
             return PrefabUtility.GetPrefabType(obj) != PrefabType.Prefab;
 #endif

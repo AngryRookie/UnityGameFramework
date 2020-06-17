@@ -1,8 +1,8 @@
 ﻿//------------------------------------------------------------
 // Game Framework
-// Copyright © 2013-2019 Jiang Yin. All rights reserved.
-// Homepage: http://gameframework.cn/
-// Feedback: mailto:jiangyin@gameframework.cn
+// Copyright © 2013-2020 Jiang Yin. All rights reserved.
+// Homepage: https://gameframework.cn/
+// Feedback: mailto:ellan@gameframework.cn
 //------------------------------------------------------------
 
 using GameFramework;
@@ -27,15 +27,19 @@ namespace UnityGameFramework.Runtime
                 case GameFrameworkLogLevel.Debug:
                     Debug.Log(Utility.Text.Format("<color=#888888>{0}</color>", message.ToString()));
                     break;
+
                 case GameFrameworkLogLevel.Info:
                     Debug.Log(message.ToString());
                     break;
+
                 case GameFrameworkLogLevel.Warning:
                     Debug.LogWarning(message.ToString());
                     break;
+
                 case GameFrameworkLogLevel.Error:
                     Debug.LogError(message.ToString());
                     break;
+
                 default:
                     throw new GameFrameworkException(message.ToString());
             }

@@ -1,8 +1,8 @@
 ﻿//------------------------------------------------------------
 // Game Framework
-// Copyright © 2013-2019 Jiang Yin. All rights reserved.
-// Homepage: http://gameframework.cn/
-// Feedback: mailto:jiangyin@gameframework.cn
+// Copyright © 2013-2020 Jiang Yin. All rights reserved.
+// Homepage: https://gameframework.cn/
+// Feedback: mailto:ellan@gameframework.cn
 //------------------------------------------------------------
 
 using GameFramework;
@@ -27,6 +27,9 @@ namespace UnityGameFramework.Runtime
         private static readonly int AssetsStringLength = "Assets".Length;
 
         [SerializeField]
+        private bool m_EnableCachedAssets = true;
+
+        [SerializeField]
         private int m_LoadAssetCountPerFrame = 1;
 
         [SerializeField]
@@ -37,9 +40,10 @@ namespace UnityGameFramework.Runtime
 
         private string m_ReadOnlyPath = null;
         private string m_ReadWritePath = null;
-        private LinkedList<LoadAssetInfo> m_LoadAssetInfos = null;
-        private LinkedList<LoadSceneInfo> m_LoadSceneInfos = null;
-        private LinkedList<UnloadSceneInfo> m_UnloadSceneInfos = null;
+        private Dictionary<string, UnityEngine.Object> m_CachedAssets = null;
+        private GameFrameworkLinkedList<LoadAssetInfo> m_LoadAssetInfos = null;
+        private GameFrameworkLinkedList<LoadSceneInfo> m_LoadSceneInfos = null;
+        private GameFrameworkLinkedList<UnloadSceneInfo> m_UnloadSceneInfos = null;
 
         /// <summary>
         /// 获取资源只读区路径。
@@ -82,6 +86,61 @@ namespace UnityGameFramework.Runtime
             get
             {
                 return null;
+            }
+        }
+
+        /// <summary>
+        /// 获取单机模式版本资源列表序列化器。
+        /// </summary>
+        public PackageVersionListSerializer PackageVersionListSerializer
+        {
+            get
+            {
+                throw new NotSupportedException("ReadWriteVersionListSerializer");
+            }
+        }
+
+        /// <summary>
+        /// 获取可更新模式版本资源列表序列化器。
+        /// </summary>
+        public UpdatableVersionListSerializer UpdatableVersionListSerializer
+        {
+            get
+            {
+                throw new NotSupportedException("ReadWriteVersionListSerializer");
+            }
+        }
+
+        /// <summary>
+        /// 获取本地只读区版本资源列表序列化器。
+        /// </summary>
+        public ReadOnlyVersionListSerializer ReadOnlyVersionListSerializer
+        {
+            get
+            {
+                throw new NotSupportedException("ReadWriteVersionListSerializer");
+            }
+        }
+
+        /// <summary>
+        /// 获取本地读写区版本资源列表序列化器。
+        /// </summary>
+        public ReadWriteVersionListSerializer ReadWriteVersionListSerializer
+        {
+            get
+            {
+                throw new NotSupportedException("ReadWriteVersionListSerializer");
+            }
+        }
+
+        /// <summary>
+        /// 获取资源包版本资源列表序列化器。
+        /// </summary>
+        public ResourcePackVersionListSerializer ResourcePackVersionListSerializer
+        {
+            get
+            {
+                throw new NotSupportedException("ResourcePackVersionListSerializer");
             }
         }
 
@@ -156,6 +215,43 @@ namespace UnityGameFramework.Runtime
         }
 
         /// <summary>
+        /// 获取或设置每更新多少字节的资源，重新生成一次版本资源列表。
+        /// </summary>
+        public int GenerateReadWriteVersionListLength
+        {
+            get
+            {
+                throw new NotSupportedException("GenerateReadWriteVersionListLength");
+            }
+            set
+            {
+                throw new NotSupportedException("GenerateReadWriteVersionListLength");
+            }
+        }
+
+        /// <summary>
+        /// 获取正在应用的资源包路径。
+        /// </summary>
+        public string ApplyingResourcePackPath
+        {
+            get
+            {
+                throw new NotSupportedException("ApplyingResourcePackPath");
+            }
+        }
+
+        /// <summary>
+        /// 获取等待应用资源数量。
+        /// </summary>
+        public int ApplyWaitingCount
+        {
+            get
+            {
+                throw new NotSupportedException("ApplyWaitingCount");
+            }
+        }
+
+        /// <summary>
         /// 获取或设置资源更新重试次数。
         /// </summary>
         public int UpdateRetryCount
@@ -171,6 +267,17 @@ namespace UnityGameFramework.Runtime
         }
 
         /// <summary>
+        /// 获取正在更新的资源组。
+        /// </summary>
+        public IResourceGroup UpdatingResourceGroup
+        {
+            get
+            {
+                throw new NotSupportedException("UpdatingResourceGroup");
+            }
+        }
+
+        /// <summary>
         /// 获取等待更新资源个数。
         /// </summary>
         public int UpdateWaitingCount
@@ -178,6 +285,17 @@ namespace UnityGameFramework.Runtime
             get
             {
                 throw new NotSupportedException("UpdateWaitingCount");
+            }
+        }
+
+        /// <summary>
+        /// 获取候选更新资源数量。
+        /// </summary>
+        public int UpdateCandidateCount
+        {
+            get
+            {
+                throw new NotSupportedException("UpdateCandidateCount");
             }
         }
 
@@ -356,7 +474,28 @@ namespace UnityGameFramework.Runtime
             }
         }
 
+        /// <summary>
+        /// 获取等待编辑器加载的资源数量。
+        /// </summary>
+        public int LoadWaitingAssetCount
+        {
+            get
+            {
+                return m_LoadAssetInfos.Count;
+            }
+        }
+
 #pragma warning disable 0067, 0414
+
+        /// <summary>
+        /// 资源应用成功事件。
+        /// </summary>
+        public event EventHandler<GameFramework.Resource.ResourceApplySuccessEventArgs> ResourceApplySuccess = null;
+
+        /// <summary>
+        /// 资源应用失败事件。
+        /// </summary>
+        public event EventHandler<GameFramework.Resource.ResourceApplyFailureEventArgs> ResourceApplyFailure = null;
 
         /// <summary>
         /// 资源更新开始事件。
@@ -384,9 +523,10 @@ namespace UnityGameFramework.Runtime
         {
             m_ReadOnlyPath = null;
             m_ReadWritePath = null;
-            m_LoadAssetInfos = new LinkedList<LoadAssetInfo>();
-            m_LoadSceneInfos = new LinkedList<LoadSceneInfo>();
-            m_UnloadSceneInfos = new LinkedList<UnloadSceneInfo>();
+            m_CachedAssets = new Dictionary<string, UnityEngine.Object>();
+            m_LoadAssetInfos = new GameFrameworkLinkedList<LoadAssetInfo>();
+            m_LoadSceneInfos = new GameFrameworkLinkedList<LoadSceneInfo>();
+            m_UnloadSceneInfos = new GameFrameworkLinkedList<UnloadSceneInfo>();
 
             BaseComponent baseComponent = GetComponent<BaseComponent>();
             if (baseComponent == null)
@@ -418,17 +558,25 @@ namespace UnityGameFramework.Runtime
                     float elapseSeconds = (float)(DateTime.Now - loadAssetInfo.StartTime).TotalSeconds;
                     if (elapseSeconds >= loadAssetInfo.DelaySeconds)
                     {
-                        UnityEngine.Object asset = null;
+                        UnityEngine.Object asset = GetCachedAsset(loadAssetInfo.AssetName);
+                        if (asset == null)
+                        {
 #if UNITY_EDITOR
-                        if (loadAssetInfo.AssetType != null)
-                        {
-                            asset = UnityEditor.AssetDatabase.LoadAssetAtPath(loadAssetInfo.AssetName, loadAssetInfo.AssetType);
-                        }
-                        else
-                        {
-                            asset = UnityEditor.AssetDatabase.LoadMainAssetAtPath(loadAssetInfo.AssetName);
-                        }
+                            if (loadAssetInfo.AssetType != null)
+                            {
+                                asset = UnityEditor.AssetDatabase.LoadAssetAtPath(loadAssetInfo.AssetName, loadAssetInfo.AssetType);
+                            }
+                            else
+                            {
+                                asset = UnityEditor.AssetDatabase.LoadMainAssetAtPath(loadAssetInfo.AssetName);
+                            }
+
+                            if (m_EnableCachedAssets && asset != null)
+                            {
+                                m_CachedAssets.Add(loadAssetInfo.AssetName, asset);
+                            }
 #endif
+                        }
 
                         if (asset != null)
                         {
@@ -441,7 +589,7 @@ namespace UnityGameFramework.Runtime
                         {
                             if (loadAssetInfo.LoadAssetCallbacks.LoadAssetFailureCallback != null)
                             {
-                                loadAssetInfo.LoadAssetCallbacks.LoadAssetFailureCallback(loadAssetInfo.AssetName, LoadResourceStatus.NotExist, "Can not load this asset from asset database.", loadAssetInfo.UserData);
+                                loadAssetInfo.LoadAssetCallbacks.LoadAssetFailureCallback(loadAssetInfo.AssetName, LoadResourceStatus.AssetError, "Can not load this asset from asset database.", loadAssetInfo.UserData);
                             }
                         }
 
@@ -481,7 +629,7 @@ namespace UnityGameFramework.Runtime
                         {
                             if (loadSceneInfo.LoadSceneCallbacks.LoadSceneFailureCallback != null)
                             {
-                                loadSceneInfo.LoadSceneCallbacks.LoadSceneFailureCallback(loadSceneInfo.SceneAssetName, LoadResourceStatus.NotExist, "Can not load this scene from asset database.", loadSceneInfo.UserData);
+                                loadSceneInfo.LoadSceneCallbacks.LoadSceneFailureCallback(loadSceneInfo.SceneAssetName, LoadResourceStatus.AssetError, "Can not load this scene from asset database.", loadSceneInfo.UserData);
                             }
                         }
 
@@ -633,7 +781,7 @@ namespace UnityGameFramework.Runtime
         /// <summary>
         /// 使用单机模式并初始化资源。
         /// </summary>
-        /// <param name="initResourcesCompleteCallback">使用单机模式并初始化资源完成的回调函数。</param>
+        /// <param name="initResourcesCompleteCallback">使用单机模式并初始化资源完成时的回调函数。</param>
         public void InitResources(InitResourcesCompleteCallback initResourcesCompleteCallback)
         {
             throw new NotSupportedException("InitResources");
@@ -665,32 +813,68 @@ namespace UnityGameFramework.Runtime
         /// <summary>
         /// 使用可更新模式并检查资源。
         /// </summary>
-        /// <param name="checkResourcesCompleteCallback">使用可更新模式并检查资源完成的回调函数。</param>
+        /// <param name="checkResourcesCompleteCallback">使用可更新模式并检查资源完成时的回调函数。</param>
         public void CheckResources(CheckResourcesCompleteCallback checkResourcesCompleteCallback)
         {
             throw new NotSupportedException("CheckResources");
         }
 
         /// <summary>
-        /// 使用可更新模式并更新资源。
+        /// 使用可更新模式并应用资源包资源。
         /// </summary>
-        /// <param name="updateResourcesCompleteCallback">使用可更新模式并更新资源全部完成的回调函数。</param>
+        /// <param name="resourcePackPath">要应用的资源包路径。</param>
+        /// <param name="applyResourcesCompleteCallback">使用可更新模式并应用资源包资源完成时的回调函数。</param>
+        public void ApplyResources(string resourcePackPath, ApplyResourcesCompleteCallback applyResourcesCompleteCallback)
+        {
+            throw new NotSupportedException("ApplyResources");
+        }
+
+        /// <summary>
+        /// 使用可更新模式并更新全部资源。
+        /// </summary>
+        /// <param name="updateResourcesCompleteCallback">使用可更新模式并更新默认资源组完成时的回调函数。</param>
         public void UpdateResources(UpdateResourcesCompleteCallback updateResourcesCompleteCallback)
         {
             throw new NotSupportedException("UpdateResources");
         }
 
         /// <summary>
+        /// 使用可更新模式并更新指定资源组的资源。
+        /// </summary>
+        /// <param name="resourceGroupName">要更新的资源组名称。</param>
+        /// <param name="updateResourcesCompleteCallback">使用可更新模式并更新指定资源组完成时的回调函数。</param>
+        public void UpdateResources(string resourceGroupName, UpdateResourcesCompleteCallback updateResourcesCompleteCallback)
+        {
+            throw new NotSupportedException("UpdateResources");
+        }
+
+        /// <summary>
+        /// 校验资源包。
+        /// </summary>
+        /// <param name="resourcePackPath">要校验的资源包路径。</param>
+        /// <returns>是否校验资源包成功。</returns>
+        public bool VerifyResourcePack(string resourcePackPath)
+        {
+            throw new NotSupportedException("VerifyResourcePack");
+        }
+
+        /// <summary>
         /// 检查资源是否存在。
         /// </summary>
         /// <param name="assetName">要检查资源的名称。</param>
-        /// <returns>资源是否存在。</returns>
-        public bool HasAsset(string assetName)
+        /// <returns>检查资源是否存在的结果。</returns>
+        public HasAssetResult HasAsset(string assetName)
         {
 #if UNITY_EDITOR
-            return UnityEditor.AssetDatabase.LoadMainAssetAtPath(assetName) != null;
+            UnityEngine.Object obj = UnityEditor.AssetDatabase.LoadMainAssetAtPath(assetName);
+            if (obj == null)
+            {
+                return HasAssetResult.NotExist;
+            }
+
+            return obj.GetType() == typeof(UnityEditor.DefaultAsset) ? HasAssetResult.Binary : HasAssetResult.Asset;
 #else
-            return false;
+            return HasAssetResult.NotExist;
 #endif
         }
 
@@ -783,27 +967,39 @@ namespace UnityGameFramework.Runtime
         /// <param name="userData">用户自定义数据。</param>
         public void LoadAsset(string assetName, Type assetType, int priority, LoadAssetCallbacks loadAssetCallbacks, object userData)
         {
-            if (string.IsNullOrEmpty(assetName))
-            {
-                Log.Error("Asset name is invalid.");
-                return;
-            }
-
-            if (!assetName.StartsWith("Assets/"))
-            {
-                Log.Error("Asset name '{0}' is invalid.", assetName);
-                return;
-            }
-
             if (loadAssetCallbacks == null)
             {
                 Log.Error("Load asset callbacks is invalid.");
                 return;
             }
 
-            if (!ExistsFile(assetName))
+            if (string.IsNullOrEmpty(assetName))
             {
-                Log.Error("Asset '{0}' is not exist.", assetName);
+                if (loadAssetCallbacks.LoadAssetFailureCallback != null)
+                {
+                    loadAssetCallbacks.LoadAssetFailureCallback(assetName, LoadResourceStatus.NotExist, "Asset name is invalid.", userData);
+                }
+
+                return;
+            }
+
+            if (!assetName.StartsWith("Assets/"))
+            {
+                if (loadAssetCallbacks.LoadAssetFailureCallback != null)
+                {
+                    loadAssetCallbacks.LoadAssetFailureCallback(assetName, LoadResourceStatus.NotExist, Utility.Text.Format("Asset name '{0}' is invalid.", assetName), userData);
+                }
+
+                return;
+            }
+
+            if (!HasFile(assetName))
+            {
+                if (loadAssetCallbacks.LoadAssetFailureCallback != null)
+                {
+                    loadAssetCallbacks.LoadAssetFailureCallback(assetName, LoadResourceStatus.NotExist, Utility.Text.Format("Asset '{0}' is not exist.", assetName), userData);
+                }
+
                 return;
             }
 
@@ -860,27 +1056,39 @@ namespace UnityGameFramework.Runtime
         /// <param name="userData">用户自定义数据。</param>
         public void LoadScene(string sceneAssetName, int priority, LoadSceneCallbacks loadSceneCallbacks, object userData)
         {
-            if (string.IsNullOrEmpty(sceneAssetName))
-            {
-                Log.Error("Scene asset name is invalid.");
-                return;
-            }
-
-            if (!sceneAssetName.StartsWith("Assets/") || !sceneAssetName.EndsWith(".unity"))
-            {
-                Log.Error("Scene asset name '{0}' is invalid.", sceneAssetName);
-                return;
-            }
-
             if (loadSceneCallbacks == null)
             {
                 Log.Error("Load scene callbacks is invalid.");
                 return;
             }
 
-            if (!ExistsFile(sceneAssetName))
+            if (string.IsNullOrEmpty(sceneAssetName))
             {
-                Log.Error("Scene '{0}' is not exist.", sceneAssetName);
+                if (loadSceneCallbacks.LoadSceneFailureCallback != null)
+                {
+                    loadSceneCallbacks.LoadSceneFailureCallback(sceneAssetName, LoadResourceStatus.NotExist, "Scene asset name is invalid.", userData);
+                }
+
+                return;
+            }
+
+            if (!sceneAssetName.StartsWith("Assets/") || !sceneAssetName.EndsWith(".unity"))
+            {
+                if (loadSceneCallbacks.LoadSceneFailureCallback != null)
+                {
+                    loadSceneCallbacks.LoadSceneFailureCallback(sceneAssetName, LoadResourceStatus.NotExist, Utility.Text.Format("Scene asset name '{0}' is invalid.", sceneAssetName), userData);
+                }
+
+                return;
+            }
+
+            if (!HasFile(sceneAssetName))
+            {
+                if (loadSceneCallbacks.LoadSceneFailureCallback != null)
+                {
+                    loadSceneCallbacks.LoadSceneFailureCallback(sceneAssetName, LoadResourceStatus.NotExist, Utility.Text.Format("Scene '{0}' is not exist.", sceneAssetName), userData);
+                }
+
                 return;
             }
 
@@ -933,7 +1141,7 @@ namespace UnityGameFramework.Runtime
                 return;
             }
 
-            if (!ExistsFile(sceneAssetName))
+            if (!HasFile(sceneAssetName))
             {
                 Log.Error("Scene '{0}' is not exist.", sceneAssetName);
                 return;
@@ -966,64 +1174,149 @@ namespace UnityGameFramework.Runtime
         }
 
         /// <summary>
-        /// 获取资源组是否准备完毕。
+        /// 获取二进制资源的实际路径。
         /// </summary>
-        /// <param name="resourceGroupName">要检查的资源组名称。</param>
-        public bool GetResourceGroupReady(string resourceGroupName)
+        /// <param name="binaryAssetName">要获取实际路径的二进制资源的名称。</param>
+        /// <returns>二进制资源的实际路径。</returns>
+        public string GetBinaryPath(string binaryAssetName)
         {
-            throw new NotSupportedException("GetResourceGroupReady");
+            if (!HasFile(binaryAssetName))
+            {
+                return null;
+            }
+
+            return Application.dataPath.Substring(0, Application.dataPath.Length - AssetsStringLength) + binaryAssetName;
         }
 
         /// <summary>
-        /// 获取资源组资源个数。
+        /// 获取二进制资源的实际路径。
         /// </summary>
-        /// <param name="resourceGroupName">要检查的资源组名称。</param>
-        public int GetResourceGroupResourceCount(string resourceGroupName)
+        /// <param name="binaryAssetName">要获取实际路径的二进制资源的名称。</param>
+        /// <param name="storageInReadOnly">资源是否在只读区。</param>
+        /// <param name="relativePath">二进制资源相对于只读区或者读写区的相对路径。</param>
+        /// <returns>获取二进制资源的实际路径是否成功。</returns>
+        public bool GetBinaryPath(string binaryAssetName, out bool storageInReadOnly, out string relativePath)
         {
-            throw new NotSupportedException("GetResourceGroupResourceCount");
+            throw new NotSupportedException("GetBinaryPath");
         }
 
         /// <summary>
-        /// 获取资源组已准备完成资源个数。
+        /// 异步加载二进制资源。
         /// </summary>
-        /// <param name="resourceGroupName">要检查的资源组名称。</param>
-        public int GetResourceGroupReadyResourceCount(string resourceGroupName)
+        /// <param name="binaryAssetName">要加载二进制资源的名称。</param>
+        /// <param name="loadBinaryCallbacks">加载二进制资源回调函数集。</param>
+        public void LoadBinary(string binaryAssetName, LoadBinaryCallbacks loadBinaryCallbacks)
         {
-            throw new NotSupportedException("GetResourceGroupReadyResourceCount");
+            LoadBinary(binaryAssetName, loadBinaryCallbacks, null);
         }
 
         /// <summary>
-        /// 获取资源组总大小。
+        /// 异步加载二进制资源。
         /// </summary>
-        /// <param name="resourceGroupName">要检查的资源组名称。</param>
-        public int GetResourceGroupTotalLength(string resourceGroupName)
+        /// <param name="binaryAssetName">要加载二进制资源的名称。</param>
+        /// <param name="loadBinaryCallbacks">加载二进制资源回调函数集。</param>
+        /// <param name="userData">用户自定义数据。</param>
+        public void LoadBinary(string binaryAssetName, LoadBinaryCallbacks loadBinaryCallbacks, object userData)
         {
-            throw new NotSupportedException("GetResourceGroupTotalLength");
+            if (loadBinaryCallbacks == null)
+            {
+                Log.Error("Load binary callbacks is invalid.");
+                return;
+            }
+
+            if (string.IsNullOrEmpty(binaryAssetName))
+            {
+                if (loadBinaryCallbacks.LoadBinaryFailureCallback != null)
+                {
+                    loadBinaryCallbacks.LoadBinaryFailureCallback(binaryAssetName, LoadResourceStatus.NotExist, "Binary asset name is invalid.", userData);
+                }
+
+                return;
+            }
+
+            if (!binaryAssetName.StartsWith("Assets/"))
+            {
+                if (loadBinaryCallbacks.LoadBinaryFailureCallback != null)
+                {
+                    loadBinaryCallbacks.LoadBinaryFailureCallback(binaryAssetName, LoadResourceStatus.NotExist, Utility.Text.Format("Binary asset name '{0}' is invalid.", binaryAssetName), userData);
+                }
+
+                return;
+            }
+
+            string binaryPath = GetBinaryPath(binaryAssetName);
+            if (binaryPath == null)
+            {
+                if (loadBinaryCallbacks.LoadBinaryFailureCallback != null)
+                {
+                    loadBinaryCallbacks.LoadBinaryFailureCallback(binaryAssetName, LoadResourceStatus.NotExist, Utility.Text.Format("Binary asset '{0}' is not exist.", binaryAssetName), userData);
+                }
+
+                return;
+            }
+
+            try
+            {
+                byte[] binaryBytes = File.ReadAllBytes(binaryPath);
+                loadBinaryCallbacks.LoadBinarySuccessCallback(binaryAssetName, binaryBytes, 0f, userData);
+            }
+            catch (Exception exception)
+            {
+                if (loadBinaryCallbacks.LoadBinaryFailureCallback != null)
+                {
+                    loadBinaryCallbacks.LoadBinaryFailureCallback(binaryAssetName, LoadResourceStatus.AssetError, exception.ToString(), userData);
+                }
+            }
         }
 
         /// <summary>
-        /// 获取资源组已准备完成总大小。
+        /// 检查资源组是否存在。
         /// </summary>
-        /// <param name="resourceGroupName">要检查的资源组名称。</param>
-        public int GetResourceGroupTotalReadyLength(string resourceGroupName)
+        /// <param name="resourceGroupName">要检查资源组的名称。</param>
+        /// <returns>资源组是否存在。</returns>
+        public bool HasResourceGroup(string resourceGroupName)
         {
-            throw new NotSupportedException("GetResourceGroupTotalReadyLength");
+            throw new NotSupportedException("HasResourceGroup");
         }
 
         /// <summary>
-        /// 获取资源组准备进度。
+        /// 获取默认资源组。
         /// </summary>
-        /// <param name="resourceGroupName">要检查的资源组名称。</param>
-        public float GetResourceGroupProgress(string resourceGroupName)
+        /// <returns>默认资源组。</returns>
+        public IResourceGroup GetResourceGroup()
         {
-            throw new NotSupportedException("GetResourceGroupProgress");
+            throw new NotSupportedException("GetResourceGroup");
         }
 
-        private bool ExistsFile(string assetName)
+        /// <summary>
+        /// 获取资源组。
+        /// </summary>
+        /// <param name="resourceGroupName">要获取的资源组名称。</param>
+        /// <returns>要获取的资源组。</returns>
+        public IResourceGroup GetResourceGroup(string resourceGroupName)
+        {
+            throw new NotSupportedException("GetResourceGroup");
+        }
+
+        /// <summary>
+        /// 获取所有加载资源任务的信息。
+        /// </summary>
+        /// <returns>所有加载资源任务的信息。</returns>
+        public TaskInfo[] GetAllLoadAssetInfos()
+        {
+            throw new NotSupportedException("GetAllLoadAssetInfos");
+        }
+
+        private bool HasFile(string assetName)
         {
             if (string.IsNullOrEmpty(assetName))
             {
                 return false;
+            }
+
+            if (HasCachedAsset(assetName))
+            {
+                return true;
             }
 
             string assetFullName = Application.dataPath.Substring(0, Application.dataPath.Length - AssetsStringLength) + assetName;
@@ -1070,7 +1363,43 @@ namespace UnityGameFramework.Runtime
             return true;
         }
 
-        private sealed class LoadAssetInfo
+        private bool HasCachedAsset(string assetName)
+        {
+            if (!m_EnableCachedAssets)
+            {
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(assetName))
+            {
+                return false;
+            }
+
+            return m_CachedAssets.ContainsKey(assetName);
+        }
+
+        private UnityEngine.Object GetCachedAsset(string assetName)
+        {
+            if (!m_EnableCachedAssets)
+            {
+                return null;
+            }
+
+            if (string.IsNullOrEmpty(assetName))
+            {
+                return null;
+            }
+
+            UnityEngine.Object asset = null;
+            if (m_CachedAssets.TryGetValue(assetName, out asset))
+            {
+                return asset;
+            }
+
+            return null;
+        }
+
+        private struct LoadAssetInfo
         {
             private readonly string m_AssetName;
             private readonly Type m_AssetType;
@@ -1148,7 +1477,7 @@ namespace UnityGameFramework.Runtime
             }
         }
 
-        private sealed class LoadSceneInfo
+        private struct LoadSceneInfo
         {
             private readonly AsyncOperation m_AsyncOperation;
             private readonly string m_SceneAssetName;
@@ -1216,7 +1545,7 @@ namespace UnityGameFramework.Runtime
             }
         }
 
-        private sealed class UnloadSceneInfo
+        private struct UnloadSceneInfo
         {
             private readonly AsyncOperation m_AsyncOperation;
             private readonly string m_SceneAssetName;

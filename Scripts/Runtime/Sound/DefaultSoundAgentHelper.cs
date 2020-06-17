@@ -1,10 +1,11 @@
 ﻿//------------------------------------------------------------
 // Game Framework
-// Copyright © 2013-2019 Jiang Yin. All rights reserved.
-// Homepage: http://gameframework.cn/
-// Feedback: mailto:jiangyin@gameframework.cn
+// Copyright © 2013-2020 Jiang Yin. All rights reserved.
+// Homepage: https://gameframework.cn/
+// Feedback: mailto:ellan@gameframework.cn
 //------------------------------------------------------------
 
+using GameFramework;
 using GameFramework.Sound;
 using System;
 using System.Collections;
@@ -343,7 +344,9 @@ namespace UnityGameFramework.Runtime
 
             if (m_ResetSoundAgentEventHandler != null)
             {
-                m_ResetSoundAgentEventHandler(this, new ResetSoundAgentEventArgs());
+                ResetSoundAgentEventArgs resetSoundAgentEventArgs = ResetSoundAgentEventArgs.Create();
+                m_ResetSoundAgentEventHandler(this, resetSoundAgentEventArgs);
+                ReferencePool.Release(resetSoundAgentEventArgs);
             }
         }
 
@@ -368,7 +371,9 @@ namespace UnityGameFramework.Runtime
         {
             if (!IsPlaying && m_AudioSource.clip != null && m_ResetSoundAgentEventHandler != null)
             {
-                m_ResetSoundAgentEventHandler(this, new ResetSoundAgentEventArgs());
+                ResetSoundAgentEventArgs resetSoundAgentEventArgs = ResetSoundAgentEventArgs.Create();
+                m_ResetSoundAgentEventHandler(this, resetSoundAgentEventArgs);
+                ReferencePool.Release(resetSoundAgentEventArgs);
                 return;
             }
 
@@ -388,7 +393,9 @@ namespace UnityGameFramework.Runtime
 
             if (m_ResetSoundAgentEventHandler != null)
             {
-                m_ResetSoundAgentEventHandler(this, new ResetSoundAgentEventArgs());
+                ResetSoundAgentEventArgs resetSoundAgentEventArgs = ResetSoundAgentEventArgs.Create();
+                m_ResetSoundAgentEventHandler(this, resetSoundAgentEventArgs);
+                ReferencePool.Release(resetSoundAgentEventArgs);
             }
         }
 

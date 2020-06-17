@@ -1,8 +1,8 @@
 ﻿//------------------------------------------------------------
 // Game Framework
-// Copyright © 2013-2019 Jiang Yin. All rights reserved.
-// Homepage: http://gameframework.cn/
-// Feedback: mailto:jiangyin@gameframework.cn
+// Copyright © 2013-2020 Jiang Yin. All rights reserved.
+// Homepage: https://gameframework.cn/
+// Feedback: mailto:ellan@gameframework.cn
 //------------------------------------------------------------
 
 #if !UNITY_2018_3_OR_NEWER
@@ -24,22 +24,38 @@ namespace UnityGameFramework.Runtime
         private int m_LastDownloadedSize = 0;
         private bool m_Disposed = false;
 
-        private EventHandler<DownloadAgentHelperUpdateEventArgs> m_DownloadAgentHelperUpdateEventHandler = null;
+        private EventHandler<DownloadAgentHelperUpdateBytesEventArgs> m_DownloadAgentHelperUpdateBytesEventHandler = null;
+        private EventHandler<DownloadAgentHelperUpdateLengthEventArgs> m_DownloadAgentHelperUpdateLengthEventHandler = null;
         private EventHandler<DownloadAgentHelperCompleteEventArgs> m_DownloadAgentHelperCompleteEventHandler = null;
         private EventHandler<DownloadAgentHelperErrorEventArgs> m_DownloadAgentHelperErrorEventHandler = null;
 
         /// <summary>
-        /// 下载代理辅助器更新事件。
+        /// 下载代理辅助器更新数据流事件。
         /// </summary>
-        public override event EventHandler<DownloadAgentHelperUpdateEventArgs> DownloadAgentHelperUpdate
+        public override event EventHandler<DownloadAgentHelperUpdateBytesEventArgs> DownloadAgentHelperUpdateBytes
         {
             add
             {
-                m_DownloadAgentHelperUpdateEventHandler += value;
+                m_DownloadAgentHelperUpdateBytesEventHandler += value;
             }
             remove
             {
-                m_DownloadAgentHelperUpdateEventHandler -= value;
+                m_DownloadAgentHelperUpdateBytesEventHandler -= value;
+            }
+        }
+
+        /// <summary>
+        /// 下载代理辅助器更新数据大小事件。
+        /// </summary>
+        public override event EventHandler<DownloadAgentHelperUpdateLengthEventArgs> DownloadAgentHelperUpdateLength
+        {
+            add
+            {
+                m_DownloadAgentHelperUpdateLengthEventHandler += value;
+            }
+            remove
+            {
+                m_DownloadAgentHelperUpdateLengthEventHandler -= value;
             }
         }
 
@@ -80,7 +96,7 @@ namespace UnityGameFramework.Runtime
         /// <param name="userData">用户自定义数据。</param>
         public override void Download(string downloadUri, object userData)
         {
-            if (m_DownloadAgentHelperUpdateEventHandler == null || m_DownloadAgentHelperCompleteEventHandler == null || m_DownloadAgentHelperErrorEventHandler == null)
+            if (m_DownloadAgentHelperUpdateBytesEventHandler == null || m_DownloadAgentHelperUpdateLengthEventHandler == null || m_DownloadAgentHelperCompleteEventHandler == null || m_DownloadAgentHelperErrorEventHandler == null)
             {
                 Log.Fatal("Download agent helper handler is invalid.");
                 return;
@@ -97,7 +113,7 @@ namespace UnityGameFramework.Runtime
         /// <param name="userData">用户自定义数据。</param>
         public override void Download(string downloadUri, int fromPosition, object userData)
         {
-            if (m_DownloadAgentHelperUpdateEventHandler == null || m_DownloadAgentHelperCompleteEventHandler == null || m_DownloadAgentHelperErrorEventHandler == null)
+            if (m_DownloadAgentHelperUpdateBytesEventHandler == null || m_DownloadAgentHelperUpdateLengthEventHandler == null || m_DownloadAgentHelperCompleteEventHandler == null || m_DownloadAgentHelperErrorEventHandler == null)
             {
                 Log.Fatal("Download agent helper handler is invalid.");
                 return;
@@ -120,7 +136,7 @@ namespace UnityGameFramework.Runtime
         /// <param name="userData">用户自定义数据。</param>
         public override void Download(string downloadUri, int fromPosition, int toPosition, object userData)
         {
-            if (m_DownloadAgentHelperUpdateEventHandler == null || m_DownloadAgentHelperCompleteEventHandler == null || m_DownloadAgentHelperErrorEventHandler == null)
+            if (m_DownloadAgentHelperUpdateBytesEventHandler == null || m_DownloadAgentHelperUpdateLengthEventHandler == null || m_DownloadAgentHelperCompleteEventHandler == null || m_DownloadAgentHelperErrorEventHandler == null)
             {
                 Log.Fatal("Download agent helper handler is invalid.");
                 return;
@@ -161,7 +177,7 @@ namespace UnityGameFramework.Runtime
         /// 释放资源。
         /// </summary>
         /// <param name="disposing">释放资源标记。</param>
-        private void Dispose(bool disposing)
+        protected virtual void Dispose(bool disposing)
         {
             if (m_Disposed)
             {
@@ -187,24 +203,41 @@ namespace UnityGameFramework.Runtime
                 return;
             }
 
+            int deltaLength = m_WWW.bytesDownloaded - m_LastDownloadedSize;
+            if (deltaLength > 0)
+            {
+                m_LastDownloadedSize = m_WWW.bytesDownloaded;
+                DownloadAgentHelperUpdateLengthEventArgs downloadAgentHelperUpdateLengthEventArgs = DownloadAgentHelperUpdateLengthEventArgs.Create(deltaLength);
+                m_DownloadAgentHelperUpdateLengthEventHandler(this, downloadAgentHelperUpdateLengthEventArgs);
+                ReferencePool.Release(downloadAgentHelperUpdateLengthEventArgs);
+            }
+
+            if (m_WWW == null)
+            {
+                return;
+            }
+
             if (!m_WWW.isDone)
             {
-                if (m_LastDownloadedSize < m_WWW.bytesDownloaded)
-                {
-                    m_LastDownloadedSize = m_WWW.bytesDownloaded;
-                    m_DownloadAgentHelperUpdateEventHandler(this, new DownloadAgentHelperUpdateEventArgs(m_WWW.bytesDownloaded, null));
-                }
-
                 return;
             }
 
             if (!string.IsNullOrEmpty(m_WWW.error))
             {
-                m_DownloadAgentHelperErrorEventHandler(this, new DownloadAgentHelperErrorEventArgs(m_WWW.error));
+                DownloadAgentHelperErrorEventArgs dodwnloadAgentHelperErrorEventArgs = DownloadAgentHelperErrorEventArgs.Create(m_WWW.error.StartsWith(RangeNotSatisfiableErrorCode.ToString()), m_WWW.error);
+                m_DownloadAgentHelperErrorEventHandler(this, dodwnloadAgentHelperErrorEventArgs);
+                ReferencePool.Release(dodwnloadAgentHelperErrorEventArgs);
             }
             else
             {
-                m_DownloadAgentHelperCompleteEventHandler(this, new DownloadAgentHelperCompleteEventArgs(m_WWW.bytesDownloaded, m_WWW.bytes));
+                byte[] bytes = m_WWW.bytes;
+                DownloadAgentHelperUpdateBytesEventArgs downloadAgentHelperUpdateBytesEventArgs = DownloadAgentHelperUpdateBytesEventArgs.Create(bytes, 0, bytes.Length);
+                m_DownloadAgentHelperUpdateBytesEventHandler(this, downloadAgentHelperUpdateBytesEventArgs);
+                ReferencePool.Release(downloadAgentHelperUpdateBytesEventArgs);
+
+                DownloadAgentHelperCompleteEventArgs downloadAgentHelperCompleteEventArgs = DownloadAgentHelperCompleteEventArgs.Create(bytes.Length);
+                m_DownloadAgentHelperCompleteEventHandler(this, downloadAgentHelperCompleteEventArgs);
+                ReferencePool.Release(downloadAgentHelperCompleteEventArgs);
             }
         }
     }
